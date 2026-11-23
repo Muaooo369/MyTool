@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>一鍵複製網址 v1.5</title>
+<style>
+:root{color-scheme:dark;--bg:#0f1420;--sf:#19202f;--sf2:#222b3e;--tx:#e8ebf3;--mu:#97a0b5;--ac:#f0b44c;--ok:#5fd0a0;--bd:#2c374d;--fs:16px;--fw:500}
+*{box-sizing:border-box}
+html{font-size:var(--fs)}
+body{margin:0;background:var(--bg);color:var(--tx);font:var(--fw) 1rem/1.5 -apple-system,"PingFang TC","Microsoft JhengHei","Noto Sans CJK TC",sans-serif;padding:env(safe-area-inset-top) 0 90px}
+.wrap{max-width:1200px;margin:0 auto;padding:12px}
+header{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5}
+h1{margin:0 0 8px;font-size:1.05rem;display:flex;justify-content:space-between;align-items:baseline}
+h1 small{color:var(--mu);font-weight:500;font-size:.7em}
+.tabs{display:flex;gap:6px}
+.tab{flex:1;padding:10px 4px;border:1px solid var(--bd);background:var(--sf);color:var(--mu);border-radius:10px;font:inherit;font-weight:700}
+.tab.on{background:var(--ac);color:#1a1405;border-color:var(--ac)}
+input,textarea{width:100%;padding:12px;background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:10px;font:inherit}
+textarea{min-height:120px;resize:vertical}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px}
+.chip{flex:none;padding:6px 14px;border-radius:99px;border:1px solid var(--bd);background:transparent;color:var(--mu);font:inherit}
+.chip.on{border-color:var(--ac);color:var(--ac)}
+.list{display:grid;gap:10px;margin-top:10px}
+.item{display:flex;gap:10px;align-items:stretch;background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:12px}
+.info{flex:1;min-width:0}
+.ttl{font-weight:700;overflow-wrap:anywhere}
+.sub{color:var(--mu);font-size:.8em;font-weight:400;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;white-space:pre-line}
+.sub.full{display:block;-webkit-line-clamp:unset;color:var(--tx);white-space:pre-wrap;margin-top:4px}
+.tag{display:inline-block;font-size:.7em;color:var(--ac);margin-top:2px}
+.btns{display:flex;flex-direction:column;gap:6px}
+button{font:inherit;cursor:pointer}
+.copy{flex:1;min-width:84px;padding:10px 14px;border:0;border-radius:10px;background:var(--ac);color:#1a1405;font-weight:800}
+.copy.done{background:var(--ok)}
+.edit{padding:4px 10px;border:1px solid var(--bd);background:transparent;color:var(--mu);border-radius:8px;font-size:.75em}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));padding:14px 22px;border:0;border-radius:99px;background:var(--ac);color:#1a1405;font-weight:800;box-shadow:0 4px 18px #0008}
+.gear{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom));padding:14px 18px;border:1px solid var(--bd);border-radius:99px;background:var(--sf2);color:var(--tx);font-weight:700}
+dialog{width:min(560px,94vw);background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:14px;padding:16px}
+dialog::backdrop{background:#000b}
+label{display:block;margin:10px 0 4px;color:var(--mu);font-size:.85em}
+.row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.row button{flex:1;padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx);font-weight:700}
+.row .pri{background:var(--ac);color:#1a1405;border-color:var(--ac)}
+.row .del{color:#ff8a8a}
+.two{display:flex;gap:10px}.two>div{flex:1}
+.bar{background:#3a2f12;border:1px solid var(--ac);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.bar button{padding:8px 14px;border-radius:8px;border:0;background:var(--ac);color:#1a1405;font-weight:800}
+.empty{color:var(--mu);text-align:center;padding:40px 10px}
+.warn{color:#ff9d7a;font-size:.75em}
+.snap{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:.85em}
+.snap button{padding:4px 10px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--tx)}
+.big{width:100%;padding:16px;font-size:1.05em;border:0;border-radius:12px;background:var(--ac);color:#1a1405;font-weight:800;margin-top:12px}
+.big.done{background:var(--ok)}
+#toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:var(--ok);color:#06241a;padding:8px 18px;border-radius:99px;font-weight:800;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+#toast.on{opacity:1}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+/* 電腦版：字體加大加粗、雙欄 */
+@media(min-width:900px){
+ :root{--fs:22px;--fw:700}
+ .list{grid-template-columns:1fr 1fr;gap:14px}
+ .item{padding:16px}
+ .sub{font-weight:600}
+ .wrap{padding:20px 28px}
+ #oout{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="toast">已複製</div>
+<div class="wrap">
+ <header>
+  <h1>一鍵複製網址 <small id="ver"></small></h1>
+  <div id="bar"></div>
+  <div class="tabs">
+   <button class="tab on" data-t="urls">網址</button>
+   <button class="tab" data-t="texts">文字</button>
+   <button class="tab" data-t="thread">Threads</button>
+   <button class="tab" data-t="order">訂單</button>
+  </div>
+ </header>
+
+ <section id="p-main">
+  <input id="q" type="search" placeholder="搜尋標題或內容" style="margin-top:10px">
+  <div class="chips" id="chips"></div>
+  <div class="list" id="list"></div>
+ </section>
+
+ <section id="p-thread" hidden>
+  <label>貼上整篇文章（用單獨一行的 --- 分段）</label>
+  <textarea id="tin" style="min-height:220px"></textarea>
+  <div class="two"><div><label>一般上限（字）</label><input id="soft" type="number" value="480"></div><div><label>最大上限（字）</label><input id="hard" type="number" value="500"></div></div>
+  <div class="row"><button class="pri" id="tgo">切割</button><button id="tclr">清空</button></div>
+  <div class="list" id="tout"></div>
+ </section>
+
+ <section id="p-order" hidden>
+  <label>貼上客戶資料</label>
+  <textarea id="oin" style="min-height:170px"></textarea>
+  <div class="row"><button class="pri" id="ogo">整理</button><button id="oclr">清空</button></div>
+  <div id="owarn" class="warn" style="margin-top:8px"></div>
+  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="title" style="width:auto"> 姓名保留稱謂（小姐／先生）</label>
+  <button class="big" id="orow">複製整列（貼到試算表）</button>
+  <div class="list" id="oout"></div>
+  <datalist id="ptypes"><option value="現金"><option value="宅配貨到付款"><option value="超商貨到付款"><option value="匯款"><option value="刷卡"></datalist>
+ </section>
+</div>
+<button class="gear" id="gear">備份</button>
+<button class="fab" id="add">＋ 新增</button>
+
+<dialog id="dlg">
+ <h3 id="dh" style="margin:0 0 4px"></h3>
+ <label>標題</label><input id="f1">
+ <label id="l2"></label><textarea id="f2"></textarea>
+ <label>分類（可新建）</label><input id="f3" list="cats">
+ <datalist id="cats"></datalist>
+ <div class="row"><button class="del" id="fd">刪除</button><button id="fc">取消</button><button class="pri" id="fs">儲存</button></div>
+</dialog>
+
+<dialog id="bk">
+ <h3 style="margin:0 0 4px">備份與轉移</h3>
+ <p style="color:var(--mu);font-size:.85em;margin:0">手機與電腦互傳：在一邊「下載備份檔」，用 AirDrop、LINE、雲端硬碟等傳到另一邊，再「匯入合併」。</p>
+ <div id="bkstat" style="color:var(--mu);font-size:.85em;margin:10px 0 0"></div>
+ <div class="row"><button class="pri" id="pick">指定備份資料夾</button><button id="tof">立即備份到資料夾</button></div>
+ <div class="row"><button id="ex">下載備份檔</button><button id="im">匯入合併</button></div>
+ <div class="row"><button id="csvt">匯出「文字」CSV</button><button id="csvu">匯出「網址」CSV</button></div>
+ <input type="file" id="file" accept=".json,application/json" hidden>
+ <label style="margin-top:16px">自動快照（每次修改自動存，最多 10 份）</label>
+ <div id="snaps"></div>
+ <div class="row"><button id="bc">關閉</button></div>
+</dialog>
+
+<script>
+const VERSION='1.5';
+const K='linkbox-v1',KB='linkbox-snaps',KE='linkbox-lastexport';
+const $=id=>document.getElementById(id);
+$('ver').textContent='v'+VERSION;
+let dirH=null,S={urls:[],texts:[]},tab='urls',cat='全部',editing=null;
+const safe=(f,d)=>{try{return f()}catch(e){return d}};
+S=safe(()=>JSON.parse(localStorage.getItem(K))||S,S);
+S.urls=S.urls||[];S.texts=S.texts||[];
+
+function snaps(){return safe(()=>JSON.parse(localStorage.getItem(KB))||[],[])}
+function save(){
+ safe(()=>localStorage.setItem(K,JSON.stringify(S)));
+ const a=snaps(),now=Date.now(),d=JSON.stringify(S);
+ if(a.length&&now-a[0].t<300000)a[0]={t:now,d};else a.unshift({t:now,d});
+ safe(()=>localStorage.setItem(KB,JSON.stringify(a.slice(0,10))));
+}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),1200)}
+async function copy(text,btn){
+ let ok=false;
+ try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);ok=true}}catch(e){}
+ if(!ok){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,1e6);try{ok=document.execCommand('copy')}catch(e){}ta.remove()}
+ toast(ok?'已複製':'複製失敗，請長按手動複製');
+ if(ok&&btn){const o=btn.textContent;btn.classList.add('done');btn.textContent='已複製';setTimeout(()=>{btn.classList.remove('done');btn.textContent=o},1200)}
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const len=s=>[...s].length;
+
+/* ===== 網址／文字 ===== */
+function render(){
+ const items=S[tab]||[],cats=['全部',...new Set(items.map(i=>i.cat).filter(Boolean))];
+ if(!cats.includes(cat))cat='全部';
+ $('chips').innerHTML=cats.map(c=>`<button class="chip${c===cat?' on':''}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+ const q=$('q').value.trim().toLowerCase();
+ const rows=items.filter(i=>(cat==='全部'||i.cat===cat)&&(!q||(i.title+i.body).toLowerCase().includes(q)));
+ $('list').innerHTML=rows.length?rows.map(i=>`<div class="item"><div class="info"><div class="ttl">${esc(i.title||'（無標題）')}</div><div class="sub">${esc(i.body)}</div>${i.cat?`<span class="tag">${esc(i.cat)}</span>`:''}</div><div class="btns"><button class="copy" data-id="${i.id}">複製</button><button class="edit" data-e="${i.id}">編輯</button></div></div>`).join(''):`<div class="empty">${items.length?'沒有符合的項目':'還沒有內容，點右下角「＋ 新增」'}</div>`;
+ const days=(Date.now()-(+localStorage.getItem(KE)||0))/864e5,lim=dirH?7:30;
+ $('bar').innerHTML=(S.urls.length+S.texts.length>0&&days>lim)?`<div class="bar"><span>已超過 ${lim} 天沒有備份</span><button id="bnow">${dirH?'備份到資料夾':'現在備份'}</button></div>`:'';
+ const bn=$('bnow');if(bn)bn.onclick=dirH?backupToDir:exportData;
+}
+$('list').onclick=e=>{
+ const c=e.target.closest('[data-id]'),ed=e.target.closest('[data-e]');
+ if(c){const i=S[tab].find(x=>x.id===c.dataset.id);if(i)copy(i.body,c)}
+ if(ed)openForm(ed.dataset.e);
+};
+$('chips').onclick=e=>{const c=e.target.closest('[data-c]');if(c){cat=c.dataset.c;render()}};
+$('q').oninput=render;
+document.querySelector('.tabs').onclick=e=>{
+ const t=e.target.closest('[data-t]');if(!t)return;
+ tab=t.dataset.t;cat='全部';
+ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b===t));
+ const main=tab==='urls'||tab==='texts';
+ $('p-main').hidden=!main;$('p-thread').hidden=tab!=='thread';$('p-order').hidden=tab!=='order';
+ $('add').hidden=!main;
+ if(main)render();
+};
+
+function openForm(id){
+ editing=id?S[tab].find(x=>x.id===id):null;
+ const u=tab==='urls';
+ $('dh').textContent=(editing?'編輯':'新增')+(u?'網址':'常用文字');
+ $('l2').textContent=u?'網址':'文字內容';
+ $('f2').style.minHeight=u?'70px':'160px';
+ $('f1').value=editing?editing.title:'';$('f2').value=editing?editing.body:'';$('f3').value=editing?editing.cat:(cat!=='全部'?cat:'');
+ $('fd').style.display=editing?'':'none';
+ $('cats').innerHTML=[...new Set(S[tab].map(i=>i.cat).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join('');
+ $('dlg').showModal();
+}
+$('add').onclick=()=>openForm();
+$('fc').onclick=()=>$('dlg').close();
+$('fs').onclick=()=>{
+ const o={title:$('f1').value.trim(),body:$('f2').value.trim(),cat:$('f3').value.trim()};
+ if(!o.body){toast('內容不能是空的');return}
+ if(editing)Object.assign(editing,o);else S[tab].unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),...o});
+ save();$('dlg').close();render();
+};
+$('fd').onclick=()=>{if(editing&&confirm('確定刪除這一項？')){S[tab]=S[tab].filter(x=>x!==editing);save();$('dlg').close();render()}};
+
+/* ===== Threads 分段 ===== */
+function splitLong(p,h){
+ const ss=p.split(/(?<=[。！？!?\n])/),r=[];let c='';
+ for(const s of ss){
+  if(len(c+s)<=h){c+=s;continue}
+  if(c.trim())r.push(c.trim());c=s;
+  while(len(c)>h){const a=[...c];r.push(a.slice(0,h).join(''));c=a.slice(h).join('')}
+ }
+ if(c.trim())r.push(c.trim());return r;
+}
+function splitThread(txt,soft,hard){
+ const parts=txt.split(/(\s*^[ \t]*-{3,}[ \t]*$\s*)/m),ps=[],sb=[];let gap='';
+ parts.forEach((x,i)=>{
+  if(i%2){gap=x;return}
+  const p=x.trim();if(!p)return;
+  ps.push(p);sb.push(ps.length>1?(gap||'\n---\n'):'');gap='';
+ });
+ const out=[];let i=0;
+ while(i<ps.length){
+  const p=ps[i];
+  if(len(p)>hard){splitLong(p,hard).forEach(c=>out.push({t:c,warn:true}));i++;continue}
+  let cur=p;const lim=len(p)>=hard-100?hard:soft;i++;
+  while(i<ps.length){const n=cur+sb[i]+ps[i];if(len(n)<=lim){cur=n;i++}else break}
+  out.push({t:cur});
+ }
+ return out;
+}
+$('tgo').onclick=()=>{
+ const soft=+$('soft').value||480,hard=Math.max(+$('hard').value||500,soft);
+ const r=splitThread($('tin').value,soft,hard);
+ $('tout').innerHTML=r.length?r.map((c,i)=>`<div class="item"><div class="info"><div class="ttl">第 ${i+1}／${r.length} 則・${len(c.t)} 字</div>${c.warn?'<div class="warn">單一段落超過上限，已自動斷句</div>':''}<div class="sub full">${esc(c.t)}</div></div><div class="btns"><button class="copy" data-tc="${i}">複製</button></div></div>`).join(''):'<div class="empty">請先貼上文章</div>';
+ $('tout')._r=r;
+};
+$('tout').onclick=e=>{const b=e.target.closest('[data-tc]');if(b)copy($('tout')._r[+b.dataset.tc].t,b)};
+$('tclr').onclick=()=>{$('tin').value='';$('tout').innerHTML=''};
+
+/* ===== 訂單整理 ===== */
+const F=[['date','日期'],['name','姓名'],['phone','電話'],['addr','地址／超商'],['items','品項'],['typ','付款類型'],['amt','金額'],['vat','統編']];
+$('oout').innerHTML=F.map(([k,n])=>`<div class="item"><div class="info"><label style="margin:0 0 4px">${n}</label><input id="o_${k}"${k==='typ'?' list="ptypes"':''}></div><div class="btns"><button class="copy" data-oc="${k}">複製</button></div></div>`).join('');
+const today=()=>{const d=new Date();return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`};
+const PH=/09\d{2}[-\s]?\d{3}[-\s]?\d{3,4}/;
+const LP=/(?<!\d)\(?(0[2-8]\d{0,2})(?:\)\s*|[-\s])(\d{3,4}[-\s]?\d{3,4})(?!\d)/;
+const LP2=/(?<!\d)0[2-8]\d{7,8}(?!\d)/;
+const DT1=/(?<!\d)(20\d{2})([ \/.\-])(\d{1,2})\2(\d{1,2})(?!\d)/;
+const DT2=/(?<!\d)(20\d{2})(\d{2})(\d{2})(?!\d)/;
+const ITM=/[xX×*＊]\s*\d|=\s*\d|\d\s*[包瓶盒組件個支入條罐袋箱片張雙台斤克]/;
+const isPhone=l=>PH.test(l)||LP.test(l)||LP2.test(l);
+function findDate(l){
+ let m=l.match(DT1),y,mo,d;
+ if(m){y=+m[1];mo=+m[3];d=+m[4]}else{m=l.match(DT2);if(m){y=+m[1];mo=+m[2];d=+m[3]}}
+ if(!m||mo<1||mo>12||d<1||d>31)return null;
+ const ok=new Date(y,mo-1,d).getMonth()===mo-1;
+ return {text:ok?`${y}/${mo}/${d}`:'',bad:!ok,m};
+}
+const PAY=/(貨到付款|代收|現金|匯款|刷卡)/;
+const STORE=/(便利商店|門市|店號|7-?11|711|全家|萊爾富|超商)/;
+const ADR=/(便利商店|門市|店號|7-?11|711|全家|萊爾富|超商|[縣市區鄉鎮路街巷弄]|\d+號|\d+樓)/;
+const TOT=/合計\s*[:：]?\s*(\d[\d,]*)/;
+const isNameTok=k=>/^[^\d\s]{2,5}$/.test(k)&&!ADR.test(k)&&!PAY.test(k)&&!ITM.test(k)&&!/運費|合計|統編|產品|品項|姓名|收件/.test(k);
+function parseOrder(t){
+ const L=t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),used=new Set(),warn=[];
+ let date='',phone='',name='',typ='',amt='',vat='';
+ const cut=(i,m)=>{const r=L[i].replace(m[0],'').replace(/^[\s,，:：]+|[\s,，:：]+$/g,'');if(r)L[i]=r;else used.add(i)};
+ L.forEach((l,i)=>{
+  const m=l.match(/(統一編號|統編)\s*[:：]?\s*(\d{8})/);
+  if(m){vat=m[2];used.add(i)}
+  else if(/^(統一編號|統編)\s*[:：]?$/.test(l)&&/^\d{8}$/.test(L[i+1]||'')){vat=L[i+1];used.add(i);used.add(i+1)}
+ });
+ for(let i=0;i<L.length&&!date;i++){
+  if(used.has(i)||isPhone(L[i])||PAY.test(L[i]))continue;
+  const r=findDate(L[i]);
+  if(r){if(r.bad)warn.push(`日期「${r.m[0]}」不存在，已改用今天，請確認`);else date=r.text;cut(i,r.m)}
+ }
+ const pi=L.findIndex((l,i)=>!used.has(i)&&isPhone(l));
+ let preName='';
+ if(pi>=0){
+  const l=L[pi];let m=l.match(PH);
+  if(m){const d=m[0].replace(/\D/g,'');phone=d.slice(0,4)+'-'+d.slice(4)}
+  else if(m=l.match(LP))phone=m[1]+'-'+m[2].replace(/\D/g,'');
+  else{m=l.match(LP2);phone=m[0]}
+  cut(pi,m);
+  if(!used.has(pi)){
+   const tk=L[pi].split(/\s+/).filter(Boolean),k=tk.findIndex(isNameTok);
+   if(k>=0){preName=tk[k];tk.splice(k,1);if(tk.length)L[pi]=tk.join(' ');else used.add(pi)}
+  }
+ }
+ const pay=L.findIndex((l,i)=>!used.has(i)&&PAY.test(l));
+ if(pay>=0){
+  const l=L[pay],ms=l.match(/(?:超商|宅配)?[-－—\s]*(?:貨到付款|代收|現金|匯款|刷卡)(?:\s*[\/／]\s*代收)?\s*[:：]?\s*(?:\d[\d,]*\s*元?)?/),k=ms[0];
+  const rest=l.replace(k,'').replace(/^[\s,，;；:：\/／-]+|[\s,，;；:：\/／-]+$/g,'');
+  if(rest)L[pay]=rest;else used.add(pay);
+  const n=l.match(/(貨到付款|代收|現金|匯款|刷卡)\s*[\/／]?\s*(?:代收)?\s*[:：]?\s*(\d[\d,]*)/);
+  if(n)amt=n[2].replace(/,/g,'');else{const m=l.match(TOT);if(m)amt=m[1].replace(/,/g,'')}
+  typ=/現金/.test(k)?'現金':/匯款/.test(k)?'匯款':/刷卡/.test(k)?'刷卡':/超商/.test(k)?'超商貨到付款':/宅配/.test(k)?'宅配貨到付款':'?';
+ }
+ L.forEach((l,i)=>{
+  if(used.has(i))return;
+  const m=l.match(TOT);
+  if(m){if(!amt)amt=m[1].replace(/,/g,'');used.add(i)}else if(/運費/.test(l))used.add(i);
+ });
+ if(preName)name=preName;
+ else{
+  let ni=L.findIndex((l,i)=>!used.has(i)&&/(小姐|先生|女士|姓名|收件人)/.test(l));
+  if(ni<0&&pi>=0){
+   const ok=j=>j>=0&&j<L.length&&!used.has(j)&&len(L[j])<=6&&!/\d/.test(L[j])&&!ADR.test(L[j]);
+   ni=ok(pi-1)?pi-1:ok(pi+1)?pi+1:-1;
+  }
+  if(ni<0)ni=L.findIndex((l,i)=>!used.has(i)&&len(l)<=5&&!/\d/.test(l)&&!ADR.test(l));
+  if(ni>=0){name=L[ni].replace(/^(收件人|姓名)\s*[:：]?\s*/,'').trim();used.add(ni)}
+ }
+ if(name&&!$('title').checked)name=name.replace(/\s*(小姐|先生|女士)$/,'');
+ const adr=[],itm=[];
+ L.forEach((l,i)=>{if(used.has(i))return;if(ADR.test(l)||(pi>=0&&i>pi&&!ITM.test(l)))adr.push(l);else itm.push(l)});
+ if(!amt){let s=0,mm,re=/=\s*(\d+)/g;while((mm=re.exec(t)))s+=+mm[1];if(s)amt=String(s)}
+ if(typ==='?')typ=STORE.test(adr.join(' '))?'超商貨到付款':'宅配貨到付款';
+ else if(typ==='')typ=STORE.test(adr.join(' '))?'超商貨到付款':'';
+ return {date:date||today(),name,phone,addr:adr.join(' '),items:itm.map(l=>l.replace(/\s*=\s*\d[\d,]*\s*元?\s*$/,'')).join('、'),typ,amt,vat,warn};
+}
+function doOrder(){
+ const v=parseOrder($('oin').value);
+ F.forEach(([k])=>$('o_'+k).value=v[k]);
+ $('owarn').textContent=v.warn.join('；');
+}
+$('ogo').onclick=doOrder;
+$('oin').oninput=doOrder;
+$('title').onchange=doOrder;
+$('oclr').onclick=()=>{$('oin').value='';$('owarn').textContent='';F.forEach(([k])=>$('o_'+k).value='')};
+$('oout').onclick=e=>{const b=e.target.closest('[data-oc]');if(b)copy($('o_'+b.dataset.oc).value,b)};
+$('orow').onclick=e=>copy(F.map(([k])=>$('o_'+k).value.replace(/[\t\r\n]+/g,' ')).join('\t'),e.currentTarget);
+
+/* ===== 備份 ===== */
+const ymd=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`};
+function dl(content,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+function mark(){safe(()=>localStorage.setItem(KE,Date.now()));render();updStat()}
+function exportData(){dl(JSON.stringify(S,null,1),`一鍵複製網址-備份-${ymd()}.json`,'application/json');mark();toast('已下載備份')}
+function csv(rows){return '\ufeff'+rows.map(r=>r.map(x=>'"'+String(x==null?'':x).replace(/"/g,'""')+'"').join(',')).join('\r\n')}
+function exportCsv(k){
+ const t=k==='texts';
+ dl(csv([['分類','標題',t?'文字內容':'網址'],...S[k].map(i=>[i.cat,i.title,i.body])]),`一鍵複製網址-${t?'常用文字':'網址'}-${ymd()}.csv`,'text/csv;charset=utf-8');
+ toast('已匯出 CSV');
+}
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('linkbox-db',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const kvGet=async k=>{const d=await idb();return new Promise(res=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null)})};
+const kvSet=async(k,v)=>{const d=await idb();return new Promise(res=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res()})};
+async function writeToDir(h){const f=await h.getFileHandle(`一鍵複製網址-備份-${ymd()}.json`,{create:true});const w=await f.createWritable();await w.write(JSON.stringify(S,null,1));await w.close()}
+async function backupToDir(){
+ try{
+  const o={mode:'readwrite'};
+  if(await dirH.queryPermission(o)!=='granted'&&await dirH.requestPermission(o)!=='granted'){toast('未取得資料夾權限');return}
+  await writeToDir(dirH);mark();toast('已備份到資料夾');
+ }catch(e){alert('備份到資料夾失敗，請重新指定資料夾')}
+}
+function updStat(){
+ const t=+localStorage.getItem(KE),last=t?new Date(t).toLocaleString():'尚未備份',can=!!window.showDirectoryPicker;
+ $('bkstat').textContent=!can?`此瀏覽器不能指定資料夾（手機通常如此），備份檔會存到瀏覽器的下載位置，每 30 天提醒一次。上次備份：${last}`
+  :dirH?`備份資料夾：${dirH.name}。每 7 天自動備份（開啟工具時檢查）。上次備份：${last}`
+  :`尚未指定資料夾，備份檔會存到下載位置，每 30 天提醒一次。上次備份：${last}`;
+ $('pick').hidden=!can;$('tof').hidden=!dirH;
+}
+$('pick').onclick=async()=>{
+ try{const h=await showDirectoryPicker({mode:'readwrite'});await kvSet('dir',h);dirH=h;await writeToDir(h);mark();toast('已備份到「'+h.name+'」')}
+ catch(e){if(e.name!=='AbortError')alert('這個瀏覽器無法指定資料夾，將改用下載備份檔')}
+};
+$('tof').onclick=backupToDir;
+$('csvt').onclick=()=>exportCsv('texts');
+$('csvu').onclick=()=>exportCsv('urls');
+async function autoBackup(){
+ if(!window.showDirectoryPicker){updStat();return}
+ try{
+  dirH=(await kvGet('dir'))||null;render();updStat();
+  if(!dirH||S.urls.length+S.texts.length===0)return;
+  if((Date.now()-(+localStorage.getItem(KE)||0))/864e5<7)return;
+  if(await dirH.queryPermission({mode:'readwrite'})==='granted'){await writeToDir(dirH);mark();toast('已自動備份到資料夾')}
+ }catch(e){}
+}
+function showSnaps(){
+ const a=snaps();
+ $('snaps').innerHTML=a.length?a.map((s,i)=>{const n=JSON.parse(s.d);return `<div class="snap"><span>${new Date(s.t).toLocaleString()}（網址 ${n.urls.length}／文字 ${n.texts.length}）</span><button data-r="${i}">還原</button></div>`}).join(''):'<div class="empty">還沒有快照</div>';
+}
+$('gear').onclick=()=>{showSnaps();updStat();$('bk').showModal()};
+$('bc').onclick=()=>$('bk').close();
+$('ex').onclick=exportData;
+$('im').onclick=()=>$('file').click();
+$('file').onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;
+ try{
+  const n=JSON.parse(await f.text());save();
+  for(const k of ['urls','texts']){const m=new Map(S[k].map(x=>[x.id,x]));(n[k]||[]).forEach(x=>m.set(x.id,x));S[k]=[...m.values()]}
+  save();render();showSnaps();toast('已匯入合併');
+ }catch(err){alert('這個檔案無法讀取，請選擇本工具下載的備份檔')}
+ e.target.value='';
+};
+$('snaps').onclick=e=>{
+ const b=e.target.closest('[data-r]');if(!b)return;
+ if(!confirm('還原到這個時間點？目前內容會先自動存成快照。'))return;
+ const s=snaps()[+b.dataset.r];save();S=JSON.parse(s.d);save();render();showSnaps();toast('已還原');
+};
+render();autoBackup();
+</script>
+</body>
+</html>
