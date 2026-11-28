@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工具管理器 v1.1</title>
+<script>
+try{document.documentElement.dataset.theme=localStorage.getItem('toolmgr_theme')||'dark';}catch(e){}
+</script>
+<style>
+:root{
+  --bg:#0f1218; --panel:#181d27; --panel2:#212838; --line:#2d3548;
+  --text:#e8ecf4; --sub:#9aa5bb; --accent:#6ea8ff; --accent-ink:#0b1220;
+  --ok:#4cc38a; --warn:#f0b35a; --mute:#7c869a; --danger:#ff6b6b; --gold:#ffd166;
+  --tagbg:26%; --tagfg:84%;
+  --fs:17px; --btn:46px;
+}
+:root[data-theme="light"]{
+  --bg:#f3f5f9; --panel:#ffffff; --panel2:#eef1f7; --line:#d5dbe7;
+  --text:#161b26; --sub:#5a6578; --accent:#2f6fe4; --accent-ink:#ffffff;
+  --ok:#1c8f5a; --warn:#b97a14; --mute:#6b7487; --danger:#d33b3b; --gold:#d99a00;
+  --tagbg:90%; --tagfg:26%;
+}
+@media (min-width:900px){ :root{ --fs:19px; --btn:52px; } }
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;font-size:var(--fs);line-height:1.5}
+.wrap{max-width:1320px;margin:0 auto;padding:14px 14px 40px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+header h1{margin:0;font-size:1.5em;font-weight:800}
+.ver{font-size:.8em;color:var(--sub);border:1px solid var(--line);border-radius:99px;padding:2px 10px}
+.spacer{flex:1}
+.btn{min-height:var(--btn);padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:transparent}
+.btn.small{min-height:40px;padding:0 12px}
+.btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.chip{min-height:42px;padding:0 16px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.chip small{color:var(--sub);margin-left:4px}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip.on small{color:inherit;opacity:.8}
+.hint{color:var(--sub);font-size:.85em}
+.grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:640px){ .grid{grid-template-columns:repeat(2,1fr)} }
+@media (min-width:1000px){ .grid{grid-template-columns:repeat(3,1fr)} }
+@media (min-width:1400px){ .grid{grid-template-columns:repeat(4,1fr)} }
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.archived{opacity:.62}
+.top{display:flex;gap:12px;align-items:flex-start}
+.ico{width:54px;height:54px;border-radius:14px;background:var(--panel2);display:grid;place-items:center;font-size:30px;flex:none}
+.head{min-width:0;flex:1}
+.name{font-weight:800;font-size:1.15em;line-height:1.3;word-break:break-word}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.badge{font-size:.75em;padding:1px 9px;border-radius:99px;border:1px solid var(--line);color:var(--sub)}
+.badge.ok{color:var(--ok);border-color:var(--ok)}
+.badge.warn{color:var(--warn);border-color:var(--warn)}
+.badge.mute{color:var(--mute)}
+.pin{background:none;border:0;font-size:24px;line-height:1;cursor:pointer;color:var(--mute);padding:4px;min-width:36px;min-height:36px}
+.pin.on{color:var(--gold)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:.8em;font-weight:600;padding:2px 10px;border-radius:8px;background:hsl(var(--h) 55% var(--tagbg));color:hsl(var(--h) 70% var(--tagfg))}
+.desc{opacity:.92;word-break:break-word}
+.meta{font-size:.78em;color:var(--sub);word-break:break-all}
+.note{font-size:.82em;color:var(--warn);word-break:break-word}
+.acts{display:flex;gap:8px;margin-top:auto;padding-top:4px}
+.acts .open{flex:1}
+.empty{grid-column:1/-1;text-align:center;color:var(--sub);padding:50px 10px;border:1px dashed var(--line);border-radius:16px}
+.bottom{margin-top:28px;padding-top:18px;border-top:1px solid var(--line)}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:color-mix(in srgb,var(--warn) 16%,var(--panel));border:1px solid var(--warn);border-radius:12px;padding:10px 14px;margin-bottom:12px}
+.banner[hidden]{display:none}
+.banner .msg{flex:1;min-width:200px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.foot{margin-top:14px;color:var(--sub);font-size:.82em}
+.foot details{margin-top:8px}
+.foot li{margin:2px 0}
+dialog{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:18px;padding:0;width:min(580px,94vw);max-height:92vh}
+dialog::backdrop{background:rgba(0,0,0,.62)}
+dialog form,dialog .box{padding:18px;max-height:92vh;overflow:auto}
+dialog h2{margin:0 0 4px;font-size:1.25em}
+label{display:block;font-size:.85em;color:var(--sub);margin:12px 0 4px}
+input,select,textarea{width:100%;min-height:var(--btn);padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit}
+textarea{min-height:84px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.emojis{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.emojis button{width:42px;height:42px;font-size:22px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+.picks{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.picks button{min-height:40px;padding:0 14px;border-radius:99px;border:1px dashed var(--line);background:transparent;color:var(--sub);font:inherit;cursor:pointer}
+.picks button.on{border-style:solid;border-color:var(--accent);color:var(--accent);font-weight:700}
+.trow{display:flex;gap:6px;margin-top:8px;align-items:center}
+.trow input{flex:1}
+.trow .btn{min-width:44px;padding:0 10px}
+.dlgbtns{display:flex;gap:8px;margin-top:18px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;max-width:92vw;z-index:50}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span style="font-size:1.6em">🧰</span>
+    <h1>工具管理器</h1>
+    <span class="ver" id="ver"></span>
+    <span class="spacer"></span>
+    <button class="btn small" id="btnTheme" type="button"></button>
+  </header>
+
+  <div class="chips" id="chips"></div>
+
+  <main class="grid" id="grid"></main>
+
+  <section class="bottom">
+    <div class="banner" id="banner" hidden>
+      <span class="msg" id="bannerMsg"></span>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="btnAdd" type="button">＋ 新增工具</button>
+      <button class="btn" id="btnTags" type="button">🏷 管理標籤</button>
+      <button class="btn" id="btnExport" type="button">⬇ 匯出 tools.json</button>
+      <button class="btn" id="btnImport" type="button">⬆ 匯入 tools.json</button>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
+    </div>
+    <div class="foot">
+      <div id="meta"></div>
+      <details>
+        <summary>版本紀錄</summary>
+        <ul id="changelog"></ul>
+      </details>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <form id="frm">
+    <h2 id="dlgTitle">新增工具</h2>
+    <div class="row2">
+      <div>
+        <label for="f_icon">圖示(emoji)</label>
+        <input id="f_icon" maxlength="8" placeholder="🔧">
+      </div>
+      <div>
+        <label for="f_name">中文名稱 *</label>
+        <input id="f_name" required placeholder="例如:一鍵複製網址">
+      </div>
+    </div>
+    <div class="emojis" id="emojis"></div>
+
+    <label for="f_file">原中文檔名(對照用)</label>
+    <input id="f_file" placeholder="例如:一鍵複製網址_v1.9.html">
+
+    <label for="f_url">網址 或 相對路徑(英文檔名)</label>
+    <input id="f_url" placeholder="例如:url-copy.html 或 https://…">
+
+    <label>分類標籤(點選;標籤類型請用「管理標籤」設定)</label>
+    <div class="picks" id="picks"></div>
+
+    <div class="row2">
+      <div>
+        <label for="f_ver">工具版本</label>
+        <input id="f_ver" placeholder="例如:1.9">
+      </div>
+      <div>
+        <label for="f_status">狀態</label>
+        <select id="f_status"></select>
+      </div>
+    </div>
+
+    <label for="f_desc">簡短說明</label>
+    <textarea id="f_desc" placeholder="這個工具做什麼用"></textarea>
+
+    <label for="f_note">備註</label>
+    <input id="f_note">
+
+    <div class="dlgbtns">
+      <button class="btn danger" id="btnDel" type="button">🗑 刪除</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btnCancel" type="button">取消</button>
+      <button class="btn primary" type="submit">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="tagDlg">
+  <div class="box">
+    <h2>管理標籤</h2>
+    <div class="hint">可新增、改名、刪除、調整順序;順序就是頁面最上方的標籤順序。</div>
+    <div id="tagRows"></div>
+    <div class="trow">
+      <input id="newTag" placeholder="輸入新標籤名稱" maxlength="20">
+      <button class="btn" id="btnTagAdd" type="button">＋ 新增</button>
+    </div>
+    <div class="dlgbtns">
+      <span class="spacer"></span>
+      <button class="btn" id="btnTagCancel" type="button">取消</button>
+      <button class="btn primary" id="btnTagSave" type="button">完成</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+
+<script id="defaultData" type="application/json">
+{
+  "app": "工具管理器",
+  "managerVersion": "v1.1",
+  "updatedAt": "2026-11-28T06:00:00.000Z",
+  "tagList": [],
+  "tools": [
+    {"id":"t-url-copy","icon":"📋","name":"一鍵複製網址","fileName":"一鍵複製網址.html","url":"url-copy.html","tags":[],"desc":"整理網址與文字片段,一鍵複製。","version":"1.9","status":"使用中","note":"","pinned":false},
+    {"id":"t-invoice","icon":"🧾","name":"發票稅金計算機","fileName":"發票稅金計算機.html","url":"invoice-tax-calc.html","tags":[],"desc":"三聯式發票:輸入未稅或總額,算出稅金與另一個金額。","version":"","status":"使用中","note":"","pinned":false},
+    {"id":"t-recorder","icon":"🎙️","name":"外語錄音工具","fileName":"外語錄音工具.html","url":"language-recorder.html","tags":[],"desc":"外語錄音練習工具。","version":"","status":"使用中","note":"","pinned":false}
+  ]
+}
+</script>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== 管理工具自己的版本(改版時只改這裡) ===== */
+const VERSION = 'v1.1';
+const CHANGELOG = [
+  {v:'v1.1', d:'2026-11-28', t:'移除備份與搜尋;標籤改為自訂標籤清單並固定在最上方;新增/管理標籤/匯出/匯入移到頁面最下方。'},
+  {v:'v1.0', d:'2026-11-28', t:'初版:工具卡片、分類標籤、新增/編輯/刪除、釘選、讀取與匯出 tools.json、深色/淺色。'}
+];
+
+const DRAFT_KEY = 'toolmgr_draft';
+const THEME_KEY = 'toolmgr_theme';
+const STATUS = ['使用中','實驗中','封存'];
+const STATUS_CLS = {'使用中':'ok','實驗中':'warn','封存':'mute'};
+const EMOJIS = ['🧰','📋','📝','📦','🧾','💰','📊','🔗','🔍','📷','🎮','🎉','⚔️','🌐','🈂️','🎙️','🎧','📅','🛒','🧮','⏱️','🗂️','✂️','🔔','⭐'];
+
+const $ = s => document.querySelector(s);
+const state = {tools:[], tagList:[], updatedAt:'', dirty:false, exported:false, source:'', tag:'', editId:null, editTags:[], tagDraft:[]};
+
+function el(tag, attrs){
+  const e = document.createElement(tag);
+  if(attrs){
+    for(const k in attrs){
+      const v = attrs[k];
+      if(v==null || v===false) continue;
+      if(k==='class') e.className = v;
+      else if(k==='text') e.textContent = v;
+      else if(k.slice(0,2)==='on') e.addEventListener(k.slice(2), v);
+      else if(v===true) e.setAttribute(k,'');
+      else e.setAttribute(k, v);
+    }
+  }
+  for(let i=2;i<arguments.length;i++){
+    const c = arguments[i];
+    if(c==null || c===false) continue;
+    e.append(c.nodeType ? c : document.createTextNode(c));
+  }
+  return e;
+}
+function uid(){ return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function hue(s){ let h=0; for(const c of s) h=(h*31+c.charCodeAt(0))%360; return h; }
+function fmtVer(v){ return /^v/i.test(v) ? v : 'v'+v; }
+function fmtDate(iso){ try{ return new Date(iso).toLocaleString('zh-TW',{hour12:false}); }catch(e){ return iso; } }
+function safeHref(u){ return /^\s*(javascript|data|vbscript):/i.test(u) ? '' : u; }
+function absUrl(u){ if(!u) return ''; try{ return new URL(u, location.href).href; }catch(e){ return u; } }
+function uniq(a){ return Array.from(new Set(a)); }
+
+function clean(t){
+  t = t || {};
+  const s = v => (v==null ? '' : String(v)).trim();
+  const tags = uniq((Array.isArray(t.tags) ? t.tags : s(t.tags).split(/[,，、\s]+/)).map(s).filter(Boolean));
+  return {
+    id: s(t.id) || uid(),
+    icon: s(t.icon) || '🔧',
+    name: s(t.name) || '未命名工具',
+    fileName: s(t.fileName),
+    url: s(t.url),
+    tags: tags,
+    desc: s(t.desc),
+    version: s(t.version),
+    status: STATUS.indexOf(s(t.status))>=0 ? s(t.status) : '使用中',
+    note: s(t.note),
+    pinned: !!t.pinned
+  };
+}
+/* 整理資料:標籤清單去重;工具用到但清單沒有的標籤自動補進清單 */
+function normalize(tools, tagList){
+  const list = uniq((Array.isArray(tagList) ? tagList : []).map(function(x){ return String(x).trim(); }).filter(Boolean));
+  const ts = tools.map(clean);
+  ts.forEach(function(t){ t.tags.forEach(function(g){ if(list.indexOf(g)<0) list.push(g); }); });
+  return {tools:ts, tagList:list};
+}
+
+/* ===== 資料載入:tools.json 為準;有較新的未上傳修改則用草稿 ===== */
+function readDraft(){ try{ return JSON.parse(localStorage.getItem(DRAFT_KEY)); }catch(e){ return null; } }
+function saveDraft(){
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({updatedAt:state.updatedAt, exported:state.exported, tagList:state.tagList, tools:state.tools})); }catch(e){}
+}
+function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} }
+function listOf(x){ return Array.isArray(x) ? x : (x && Array.isArray(x.tools) ? x.tools : null); }
+
+async function load(){
+  let base = null, src = '';
+  try{
+    const r = await fetch('tools.json?_='+Date.now(), {cache:'no-store'});
+    if(r.ok){ const j = await r.json(); if(listOf(j)){ base = j; src = 'tools.json'; } }
+  }catch(e){}
+  if(!base){ base = JSON.parse($('#defaultData').textContent); src = '內建預設(未讀到 tools.json)'; }
+  const baseAt = Array.isArray(base) ? '' : (base.updatedAt || '');
+  const d = readDraft();
+  if(d && Array.isArray(d.tools) && (d.updatedAt||'') > baseAt){
+    const n = normalize(d.tools, d.tagList);
+    state.tools = n.tools; state.tagList = n.tagList;
+    state.updatedAt = d.updatedAt;
+    state.dirty = true;
+    state.exported = !!d.exported;
+    state.source = '尚未上傳的修改(基於 '+src+')';
+  }else{
+    const n = normalize(listOf(base), Array.isArray(base) ? [] : base.tagList);
+    state.tools = n.tools; state.tagList = n.tagList;
+    state.updatedAt = baseAt;
+    state.dirty = false;
+    state.exported = false;
+    state.source = src;
+    clearDraft();
+  }
+}
+function commit(){
+  state.updatedAt = new Date().toISOString();
+  state.dirty = true;
+  state.exported = false;
+  saveDraft();
+  render();
+}
+function payload(){
+  if(!state.updatedAt) state.updatedAt = new Date().toISOString();
+  return {app:'工具管理器', managerVersion:VERSION, updatedAt:state.updatedAt, tagList:state.tagList, tools:state.tools};
+}
+
+/* ===== 匯出 / 匯入 tools.json ===== */
+function exportJson(){
+  const b = new Blob([JSON.stringify(payload(),null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(b);
+  const a = el('a', {href:url, download:'tools.json'});
+  document.body.append(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 500);
+  state.exported = true;
+  if(state.dirty) saveDraft();
+  render();
+  toast('已匯出 tools.json,上傳到 GitHub 覆蓋舊檔即可');
+}
+function importFile(file){
+  const rd = new FileReader();
+  rd.onload = function(){
+    try{
+      const j = JSON.parse(rd.result);
+      const arr = listOf(j);
+      if(!arr) throw new Error('格式不符');
+      if(!confirm('匯入會取代目前的工具與標籤(共 '+arr.length+' 個工具),確定嗎?')) return;
+      const n = normalize(arr, Array.isArray(j) ? [] : j.tagList);
+      state.tools = n.tools; state.tagList = n.tagList;
+      commit();
+      toast('已匯入 '+arr.length+' 個工具');
+    }catch(e){ toast('匯入失敗:檔案格式不正確'); }
+  };
+  rd.readAsText(file);
+}
+
+/* ===== 畫面 ===== */
+function visible(){
+  return state.tools.filter(function(t){
+    return !state.tag || t.tags.indexOf(state.tag)>=0;
+  }).sort(function(a,b){ return Number(b.pinned)-Number(a.pinned); });
+}
+function renderBanner(){
+  const b = $('#banner');
+  if(!state.dirty){ b.hidden = true; return; }
+  b.hidden = false;
+  $('#bannerMsg').textContent = state.exported
+    ? '✅ 已匯出新的 tools.json,記得上傳到 GitHub 覆蓋舊檔。'
+    : '✏️ 清單有尚未上傳的修改:請按「匯出 tools.json」並上傳到 GitHub。';
+}
+function renderChips(){
+  if(state.tag && state.tagList.indexOf(state.tag)<0) state.tag = '';
+  const box = $('#chips');
+  box.textContent = '';
+  function go(g){ return function(){ state.tag=g; renderChips(); renderGrid(); }; }
+  box.append(el('button',{class:'chip'+(state.tag===''?' on':''), type:'button', onclick:go('')}, '全部', el('small',{text:String(state.tools.length)})));
+  state.tagList.forEach(function(g){
+    const n = state.tools.filter(function(t){ return t.tags.indexOf(g)>=0; }).length;
+    box.append(el('button',{class:'chip'+(state.tag===g?' on':''), type:'button', onclick:go(g)}, g, el('small',{text:String(n)})));
+  });
+  if(!state.tagList.length) box.append(el('span',{class:'hint', text:'還沒有標籤,到最下方按「🏷 管理標籤」新增。'}));
+}
+function card(t){
+  const href = safeHref(t.url);
+  const open = href
+    ? el('a',{class:'btn primary open', href:href, target:'_blank', rel:'noopener'}, '▶ 開啟')
+    : el('span',{class:'btn open', 'aria-disabled':'true'}, '尚未設定網址');
+  const badges = el('div',{class:'badges'});
+  if(t.version) badges.append(el('span',{class:'badge', text:fmtVer(t.version)}));
+  badges.append(el('span',{class:'badge '+STATUS_CLS[t.status], text:t.status}));
+  const tags = el('div',{class:'tags'});
+  t.tags.forEach(function(g){ tags.append(el('span',{class:'tag', style:'--h:'+hue(g), text:g})); });
+  return el('article',{class:'card'+(t.status==='封存'?' archived':'')},
+    el('div',{class:'top'},
+      el('div',{class:'ico', text:t.icon}),
+      el('div',{class:'head'}, el('div',{class:'name', text:t.name}), badges),
+      el('button',{class:'pin'+(t.pinned?' on':''), type:'button', title:t.pinned?'取消釘選':'釘選', onclick:function(){ t.pinned=!t.pinned; commit(); }}, t.pinned?'★':'☆')
+    ),
+    t.tags.length ? tags : null,
+    t.desc ? el('div',{class:'desc', text:t.desc}) : null,
+    t.note ? el('div',{class:'note', text:'⚠ '+t.note}) : null,
+    (t.fileName || t.url) ? el('div',{class:'meta', text:(t.fileName?'📄 '+t.fileName:'')+(t.fileName&&t.url?'  →  ':'')+(t.url?'🔗 '+t.url:'')}) : null,
+    el('div',{class:'acts'},
+      open,
+      el('button',{class:'btn', type:'button', title:'複製網址', onclick:async function(){
+        if(!t.url){ toast('這個工具還沒有設定網址'); return; }
+        toast((await copyText(absUrl(t.url))) ? '已複製網址' : '複製失敗,請手動複製');
+      }}, '🔗'),
+      el('button',{class:'btn', type:'button', title:'編輯', onclick:function(){ openDlg(t); }}, '✏️')
+    )
+  );
+}
+function renderGrid(){
+  const g = $('#grid');
+  g.textContent = '';
+  const list = visible();
+  if(!state.tools.length){
+    g.append(el('div',{class:'empty', text:'還沒有工具,到最下方按「＋ 新增工具」開始。'}));
+    return;
+  }
+  if(!list.length){
+    g.append(el('div',{class:'empty', text:'這個標籤下還沒有工具。'}));
+    return;
+  }
+  list.forEach(function(t){ g.append(card(t)); });
+}
+function renderFoot(){
+  $('#meta').textContent = '資料來源:'+state.source+'・共 '+state.tools.length+' 個工具'+(state.updatedAt?'・清單更新 '+fmtDate(state.updatedAt):'');
+  const ul = $('#changelog');
+  ul.textContent = '';
+  CHANGELOG.forEach(function(c){ ul.append(el('li',{text:c.v+'('+c.d+')'+c.t})); });
+}
+function render(){
+  $('#ver').textContent = VERSION;
+  document.title = '工具管理器 '+VERSION;
+  renderBanner(); renderChips(); renderGrid(); renderFoot();
+}
+
+/* ===== 新增 / 編輯工具 ===== */
+function renderPicks(){
+  const box = $('#picks');
+  box.textContent = '';
+  if(!state.tagList.length){
+    box.append(el('span',{class:'hint', text:'還沒有標籤。先關閉視窗,用「管理標籤」建立標籤。'}));
+    return;
+  }
+  state.tagList.forEach(function(g){
+    box.append(el('button',{type:'button', class:state.editTags.indexOf(g)>=0?'on':'', onclick:function(){
+      state.editTags = state.editTags.indexOf(g)>=0 ? state.editTags.filter(function(x){ return x!==g; }) : state.editTags.concat(g);
+      renderPicks();
+    }}, g));
+  });
+}
+function openDlg(t){
+  state.editId = t ? t.id : null;
+  state.editTags = t ? t.tags.slice() : (state.tag ? [state.tag] : []);
+  $('#dlgTitle').textContent = t ? '編輯工具' : '新增工具';
+  $('#btnDel').style.display = t ? '' : 'none';
+  $('#f_icon').value = t ? t.icon : '';
+  $('#f_name').value = t ? t.name : '';
+  $('#f_file').value = t ? t.fileName : '';
+  $('#f_url').value = t ? t.url : '';
+  $('#f_ver').value = t ? t.version : '';
+  $('#f_status').value = t ? t.status : '使用中';
+  $('#f_desc').value = t ? t.desc : '';
+  $('#f_note').value = t ? t.note : '';
+  renderPicks();
+  $('#dlg').showModal();
+  if(!t) $('#f_name').focus();
+}
+function saveDlg(){
+  const old = state.tools.filter(function(x){ return x.id===state.editId; })[0];
+  const obj = clean({
+    id: old ? old.id : '',
+    icon: $('#f_icon').value, name: $('#f_name').value, fileName: $('#f_file').value,
+    url: $('#f_url').value, tags: state.editTags, desc: $('#f_desc').value,
+    version: $('#f_ver').value, status: $('#f_status').value, note: $('#f_note').value,
+    pinned: old ? old.pinned : false
+  });
+  if(old) state.tools[state.tools.indexOf(old)] = obj; else state.tools.push(obj);
+  $('#dlg').close();
+  commit();
+  toast(old ? '已儲存修改' : '已新增工具');
+}
+function deleteTool(){
+  const old = state.tools.filter(function(x){ return x.id===state.editId; })[0];
+  if(!old) return;
+  if(!confirm('確定要刪除「'+old.name+'」嗎?(只會從清單移除,不會刪除工具檔案)')) return;
+  state.tools = state.tools.filter(function(x){ return x!==old; });
+  $('#dlg').close();
+  commit();
+  toast('已刪除');
+}
+
+/* ===== 管理標籤 ===== */
+function renderTagRows(){
+  const box = $('#tagRows');
+  box.textContent = '';
+  const d = state.tagDraft;
+  if(!d.length) box.append(el('div',{class:'hint', style:'margin-top:10px', text:'目前沒有標籤。'}));
+  d.forEach(function(row, i){
+    box.append(el('div',{class:'trow'},
+      el('input',{value:row.name, maxlength:'20', 'aria-label':'標籤名稱', oninput:function(e){ row.name = e.target.value; }}),
+      el('button',{class:'btn', type:'button', title:'上移', onclick:function(){ if(i>0){ d.splice(i-1,0,d.splice(i,1)[0]); renderTagRows(); } }}, '↑'),
+      el('button',{class:'btn', type:'button', title:'下移', onclick:function(){ if(i<d.length-1){ d.splice(i+1,0,d.splice(i,1)[0]); renderTagRows(); } }}, '↓'),
+      el('button',{class:'btn danger', type:'button', title:'刪除', onclick:function(){ d.splice(i,1); renderTagRows(); }}, '🗑')
+    ));
+  });
+}
+function addTagDraft(){
+  const inp = $('#newTag');
+  const v = inp.value.trim();
+  if(!v) return;
+  state.tagDraft.push({orig:null, name:v});
+  inp.value = '';
+  renderTagRows();
+  inp.focus();
+}
+function openTagDlg(){
+  state.tagDraft = state.tagList.map(function(g){ return {orig:g, name:g}; });
+  $('#newTag').value = '';
+  renderTagRows();
+  $('#tagDlg').showModal();
+}
+function saveTags(){
+  addTagDraft();
+  const d = state.tagDraft.map(function(r){ return {orig:r.orig, name:r.name.trim()}; });
+  if(d.some(function(r){ return !r.name; })){ toast('標籤名稱不能空白'); return; }
+  const names = d.map(function(r){ return r.name; });
+  if(uniq(names).length !== names.length){ toast('有重複的標籤名稱'); return; }
+  const map = {};
+  d.forEach(function(r){ if(r.orig!=null) map[r.orig] = r.name; });
+  state.tools.forEach(function(t){
+    t.tags = uniq(t.tags.map(function(g){ return map[g]; }).filter(Boolean));
+  });
+  state.tagList = names;
+  $('#tagDlg').close();
+  commit();
+  toast('標籤已更新');
+}
+
+/* ===== 小工具 ===== */
+async function copyText(s){
+  try{ await navigator.clipboard.writeText(s); return true; }
+  catch(e){
+    const ta = el('textarea',{style:'position:fixed;opacity:0'});
+    ta.value = s; document.body.append(ta); ta.select();
+    let ok = false;
+    try{ ok = document.execCommand('copy'); }catch(_){}
+    ta.remove();
+    return ok;
+  }
+}
+function toast(m){
+  const t = $('#toast');
+  t.textContent = m; t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ t.classList.remove('show'); }, 2800);
+}
+function applyTheme(th){
+  document.documentElement.dataset.theme = th;
+  try{ localStorage.setItem(THEME_KEY, th); }catch(e){}
+  $('#btnTheme').textContent = th==='dark' ? '🌙 深色' : '☀️ 淺色';
+}
+
+/* ===== 啟動 ===== */
+async function init(){
+  applyTheme(document.documentElement.dataset.theme || 'dark');
+  $('#btnTheme').addEventListener('click', function(){ applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'); });
+
+  STATUS.forEach(function(s){ $('#f_status').append(el('option',{value:s, text:s})); });
+  EMOJIS.forEach(function(e){
+    $('#emojis').append(el('button',{type:'button', onclick:function(){ $('#f_icon').value = e; }}, e));
+  });
+
+  $('#btnAdd').addEventListener('click', function(){ openDlg(null); });
+  $('#btnTags').addEventListener('click', openTagDlg);
+  $('#btnExport').addEventListener('click', exportJson);
+  $('#btnImport').addEventListener('click', function(){ $('#fileIn').click(); });
+  $('#fileIn').addEventListener('change', function(e){ const f = e.target.files[0]; if(f) importFile(f); e.target.value = ''; });
+  $('#frm').addEventListener('submit', function(e){ e.preventDefault(); saveDlg(); });
+  $('#btnCancel').addEventListener('click', function(){ $('#dlg').close(); });
+  $('#btnDel').addEventListener('click', deleteTool);
+  $('#btnTagAdd').addEventListener('click', addTagDraft);
+  $('#newTag').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addTagDraft(); } });
+  $('#btnTagCancel').addEventListener('click', function(){ $('#tagDlg').close(); });
+  $('#btnTagSave').addEventListener('click', saveTags);
+
+  await load();
+  render();
+}
+init();
+})();
+</script>
+</body>
+</html>

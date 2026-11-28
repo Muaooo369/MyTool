@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>錄音工具 v1.5</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--fg:#1c2330;--mut:#667085;--card:#fff;--line:#d8dce3;--acc:#1f5fbf;--bad:#c62828;--ok:#2e7d32;--rec:#d32f2f}
+@media(prefers-color-scheme:dark){:root{--bg:#14171c;--fg:#e6e9ef;--mut:#9aa3b2;--card:#1d222a;--line:#323945;--acc:#6aa5ff;--bad:#ff7b72;--ok:#6fcf7f;--rec:#ff6b6b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "Microsoft JhengHei",system-ui,sans-serif;padding:16px;max-width:1100px;margin-inline:auto}
+h1{font-size:21px;margin:0 0 10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:5px 0}
+button,select,input[type=text]{font:inherit;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+button{cursor:pointer}button.p{background:var(--acc);color:#fff;border-color:var(--acc)}button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tag{color:var(--mut);font-size:13px}.tag b{color:var(--ok)}
+label{font-size:13px;color:var(--mut)}
+.main{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:12px;align-items:start}
+#list{max-height:70vh;overflow:auto;padding:0}
+.it{display:grid;grid-template-columns:22px 1fr;gap:6px;padding:7px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.it:hover{background:var(--bg)}.it.cur{background:color-mix(in srgb,var(--acc) 15%,transparent);outline:2px solid var(--acc);outline-offset:-2px}
+.it .k{font-size:12px;color:var(--mut)}.it .d{color:var(--ok);font-weight:700}
+#big{font-size:40px;line-height:1.3;margin:6px 0 4px;min-height:1.3em;word-break:break-all}
+#key{color:var(--mut);font-size:14px}
+#stat{min-height:1.6em;font-size:14px}
+#meter{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin:8px 0}
+#meter i{display:block;height:100%;width:0;background:var(--ok)}
+.rec{background:var(--rec)!important;color:#fff!important;border-color:var(--rec)!important}
+.warn{color:var(--bad)}
+.keys{font-size:12px;color:var(--mut);margin-top:10px}
+kbd{border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--bg)}
+@media(max-width:760px){.main{grid-template-columns:1fr}}
+.vi{display:block;font-size:12px;font-weight:400;opacity:.85;line-height:1.3}
+button .vi{margin-top:2px}
+.step{display:flex;gap:12px;align-items:flex-start;border:2px solid #e8710a;border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--card)}
+.step.now{box-shadow:0 0 0 4px color-mix(in srgb,#e8710a 30%,transparent)}
+.badge{flex:none;width:34px;height:34px;border-radius:50%;background:#e8710a;color:#fff;font-weight:700;font-size:18px;display:grid;place-items:center}
+.sbody{flex:1;min-width:0}.st{font-weight:700;font-size:16px;line-height:1.3}.st .vi{font-weight:400;font-size:13px;color:var(--mut)}
+button.big{padding:10px 16px}
+.seg button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+details.adv{margin-bottom:12px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--card)}
+details.adv summary{cursor:pointer;font-size:14px;color:var(--mut)}
+</style>
+</head>
+<body>
+<h1>錄音工具 <span class="vi" style="display:inline;font-size:15px">Công cụ ghi âm</span> <small style="font-size:13px;color:var(--mut);font-weight:400">v1.5</small></h1>
+<div id="warnBrowser" class="warn" style="display:none;font-weight:600;margin-bottom:8px">此瀏覽器無法選擇資料夾，請改用電腦的 Chrome 或 Edge。<span class="vi">Trình duyệt này không chọn được thư mục, hãy dùng Chrome hoặc Edge trên máy tính.</span></div>
+<div class="tag" style="margin-bottom:10px">請用電腦的 Chrome 或 Edge；瀏覽器詢問麥克風時請按「允許」。
+  <span class="vi">Hãy dùng Chrome hoặc Edge trên máy tính; khi trình duyệt hỏi quyền micro, hãy nhấn "Cho phép".</span></div>
+
+<div class="step" id="s1"><div class="badge">1</div><div class="sbody">
+  <div class="st">選擇題庫檔案（CSV／Excel）<span class="vi">Chọn tệp câu hỏi (CSV / Excel)</span></div>
+  <div class="row"><button class="p big" id="bCL">改選本機 CSV／Excel<span class="vi">Chọn tệp CSV / Excel từ máy tính</span></button><select id="shSel" style="display:none" aria-label="工作表"></select><span class="tag" id="tC">未載入 / Chưa tải</span></div>
+</div></div>
+
+<div class="step" id="s2"><div class="badge">2</div><div class="sbody">
+  <div class="st">選擇輸出資料夾（錄好的音檔會存在這裡）<span class="vi">Chọn thư mục lưu file ghi âm</span></div>
+  <div class="row"><button class="p big" id="bO">選擇輸出資料夾<span class="vi">Chọn thư mục lưu</span></button><span class="tag" id="tO">未選擇（不選則每條會下載到「下載」資料夾） / Chưa chọn (nếu không chọn, mỗi file sẽ tải vào thư mục Tải xuống)</span></div>
+</div></div>
+
+<div class="step" id="s3"><div class="badge">3</div><div class="sbody">
+  <div class="st">選擇要錄的內容<span class="vi">Chọn nội dung cần ghi âm</span></div>
+  <div class="row seg"><button id="bZh">錄中文<span class="vi">Ghi âm tiếng Trung</span></button><button id="bVi">錄越南語<span class="vi">Ghi âm tiếng Việt</span></button>
+    <label>其他欄位 <span class="vi" style="display:inline">Cột khác</span> <select id="recCol"><option value="">自動（依表單判斷） / Tự động</option></select></label></div>
+  <div class="tag" id="tMode"></div>
+</div></div>
+
+<details class="adv"><summary>進階設定（一般不需要改） / Cài đặt nâng cao (thường không cần đổi)</summary>
+  <div class="row"><label>線上 CSV 網址 <input type="text" id="uC" style="width:min(480px,60vw)" placeholder="發布的 CSV 網址，或試算表一般網址"></label><button id="bC">讀取</button></div>
+  <div class="row"><label>命名前綴 <input type="text" id="pfx" value="" style="width:200px"></label></div>
+  <div class="row"><label>麥克風 <select id="mic"></select></label><label>錄音模式 <select id="recMode"><option value="auto">自動判斷</option><option value="1">每題一條（朗讀文字欄）</option><option value="3">每題三條（選項A/B/C欄）</option></select></label></div>
+  <div class="row"><label>對照欄位 <select id="cmpCol"><option value="">無</option></select></label><label>檔名後綴 <input type="text" id="sfx" style="width:64px" placeholder="例 vi"></label><label>音質 <select id="kbps"><option>32</option><option>48</option><option>64</option><option>96</option><option>128</option></select> kbps</label></div>
+  <div class="row"><label><input type="checkbox" id="cStrip" checked> 去掉文字開頭的題號（如 1.）</label><label><input type="checkbox" id="cTrim" checked> 自動裁掉頭尾靜音並統一音量</label><label><input type="checkbox" id="cTodo"> 只看未錄</label></div>
+</details>
+<div class="main">
+  <div class="panel" id="list"></div>
+  <div class="panel">
+    <div id="key">請先載入題庫 / Hãy tải câu hỏi trước</div>
+    <div id="big"></div>
+    <div id="ctx" style="margin:6px 0;font-size:15px"></div>
+    <div id="meter"><i></i></div>
+    <div id="stat" class="tag"></div>
+    <div class="row">
+      <button class="p" id="bRec" disabled>開始錄音（空白鍵）<span class="vi">Bắt đầu ghi âm (phím Cách)</span></button>
+      <button id="bPlay" disabled>試聽（P）<span class="vi">Nghe thử (P)</span></button>
+      <button class="p" id="bSave" disabled>存檔並下一題（Enter）<span class="vi">Lưu và sang câu tiếp (Enter)</span></button>
+      <button id="bOld" disabled>播放已錄的<span class="vi">Phát bản đã ghi</span></button>
+      <button id="bPrev">上一題（↑）<span class="vi">Câu trước (↑)</span></button><button id="bSkip">跳過（↓）<span class="vi">Bỏ qua (↓)</span></button>
+    </div>
+    <div class="keys"><kbd>空白鍵</kbd> 開始／停止（錄完自動試聽，不滿意再按一次重錄）　<kbd>Enter</kbd> 存檔並跳到下一個未錄的　<kbd>P</kbd> 重聽　<kbd>↑</kbd><kbd>↓</kbd> 換題<span class="vi">Phím Cách: bắt đầu/dừng (ghi xong tự nghe thử, chưa hài lòng thì nhấn lại để ghi lại) · Enter: lưu và sang câu chưa ghi tiếp theo · P: nghe lại · ↑ ↓: đổi câu</span></div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const st={rows:[],ki:0,ti:-1,items:[],i:-1,dir:null,done:new Set(),mode:'idle',blob:null,url:null,stream:null,mr:null,ac:null,an:null,aud:null};
+
+try{$('#uC').value=localStorage.getItem('rc_url')||'';$('#pfx').value=localStorage.getItem('rc_pfx')||$('#pfx').value}catch(e){}
+const pf=()=>$('#pfx').value;
+$('#pfx').oninput=()=>{try{localStorage.setItem('rc_pfx',pf())}catch(e){}};
+
+/* ---------- CSV ---------- */
+function parseCsv(t){
+  t=t.replace(/^\uFEFF/,'');if(/^PK\u0003\u0004/.test(t)||t.includes('\u0000'))throw new Error('讀到的是 Excel 檔（.xlsx），不是 CSV。請從試算表「下載 → 逗號分隔值 (.csv)」；若用發布網址，格式要選 CSV，網址結尾是 output=csv');const rows=[];let r=[],c='',q=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+    else if(ch==='"')q=true;else if(ch===','){r.push(c);c=''}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);c='';rows.push(r);r=[]}else c+=ch}
+  if(c!==''||r.length){r.push(c);rows.push(r)}
+  return rows.filter(x=>x.some(v=>v!==''));
+}
+function gviz(id,gid){return new Promise((ok,no)=>{
+  const cb='gv'+Date.now(),s=document.createElement('script');
+  const tm=setTimeout(()=>{s.remove();no(new Error('逾時，請確認分享設為「知道連結的人可檢視」'))},12000);
+  window[cb]=r=>{clearTimeout(tm);s.remove();delete window[cb];
+    if(r.status!=='ok'){no(new Error((r.errors&&r.errors[0]&&r.errors[0].message)||'無法讀取'));return}
+    const t=r.table;ok([t.cols.map(c=>c.label||''),...t.rows.map(x=>t.cols.map((_,i)=>{const c=x.c[i];return c?String(c.f??c.v??''):''}))]);};
+  s.onerror=()=>{clearTimeout(tm);no(new Error('連線失敗'))};
+  s.src=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=responseHandler:${cb}&headers=1`+(gid?`&gid=${gid}`:'');
+  document.head.appendChild(s);})}
+function err(e){const t=$('#tC');t.textContent='讀取失敗 / Đọc thất bại：'+e.message;t.className='warn';t.style.fontWeight='600'}
+function fillCols(hd){
+  const a=$('#recCol'),b=$('#cmpCol');
+  a.innerHTML='<option value="">自動（依表單判斷）</option>';b.innerHTML='<option value="">無</option>';
+  hd.forEach(h=>{if(h.trim()){a.appendChild(new Option(h,h));b.appendChild(new Option(h,h))}});
+  $('#sfx').value='';
+}
+const outTag=()=>{const l=$('#sfx').value.trim().replace(/^_+/,'');return l?l.toUpperCase():'MP3'};
+function setRows(rows,label){
+  if(st.lastRows!==rows)fillCols(rows[0]);
+  st.lastRows=rows;st.lastLabel=label;
+  const hd=rows[0],mode=$('#recMode').value;
+  let ki=hd.findIndex(h=>/檔案|档案|文件|file|檔名|編號|编号|^id$/i.test(h));if(ki<0)ki=1;
+  let ti=hd.findIndex(h=>/朗讀|朗读|腳本|script|語音文稿|语音文稿/i.test(h));
+  if(ti<0)ti=hd.findIndex(h=>/^(中文|華語|华语|漢語|汉语)$/.test(h.trim()));
+  const oi=['A','B','C'].map(L=>hd.findIndex(h=>new RegExp('(選項|选项|描述|句子|option)\\s*_?\\s*'+L,'i').test(h)));
+  const hasQ=hd.some(h=>/提問|提问|問題/.test(h));
+  const multi=mode==='3'||(mode==='auto'&&oi.every(i=>i>=0)&&!hasQ);
+  const body=rows.slice(1).filter(r=>(r[ki]||'').trim());
+  const rc=$('#recCol').value;
+  if(rc){
+    const cI=hd.indexOf(rc),cc=$('#cmpCol').value?hd.indexOf($('#cmpCol').value):-1;
+    const lm=rc.match(/(選項|选项|越南語|越南语|越南)\s*_?\s*([ABC])\s*$/i);
+    const lang=$('#sfx').value.trim().replace(/^_+/,'');
+    const tail=(lm?'_'+lm[2].toLowerCase():'')+(lang?'_'+lang:'');
+    st.items=body.map(r=>({key:r[ki].trim().toLowerCase()+tail,raw:(r[cI]||'').replace(/\r/g,''),cmp:cc>=0?(r[cc]||'').replace(/\r/g,''):''})).filter(x=>x.raw.trim());
+  }else if(multi){
+    if(oi.some(i=>i<0))throw new Error('找不到「選項A／選項B／選項C」欄');
+    st.items=body.flatMap(r=>oi.map((c,n)=>({key:r[ki].trim().toLowerCase()+'_'+'abc'[n],raw:r[c]||'',grp:r[ki].trim().toLowerCase(),lab:'ABC'[n],full:ti>=0?(r[ti]||''):''})).filter(x=>x.raw.trim()));
+  }else{
+    if(ti<0)throw new Error('找不到「朗讀文字」欄');
+    st.ti=ti;
+    st.items=body.map(r=>({key:r[ki].trim().toLowerCase(),raw:(r[ti]||'').replace(/\r/g,'')}));
+  }
+  st.ki=ki;
+  $('#tC').className='tag';$('#tC').innerHTML=`<b>${label}</b>　${rc?st.items.length+' 條錄音（欄位：'+rc+'） / bản ghi':multi?st.items.length+' 條錄音（每題三條） / bản ghi (3 bản mỗi câu)':st.items.length+' 題 / câu'}`;
+  st.i=-1;render();goNext(-1);
+}
+$('#bC').onclick=async()=>{
+  let u=$('#uC').value.trim();if(!u)return;
+  try{localStorage.setItem('rc_url',u)}catch(e){}
+  $('#tC').textContent='讀取中… / Đang đọc…';
+  try{
+    const m=u.match(/spreadsheets\/d\/([^\/]+)\/(edit|export)/);let rows;
+    if(m&&m[1]!=='e')rows=await gviz(m[1],(u.match(/gid=(\d+)/)||[])[1]);
+    else{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);rows=parseCsv(await r.text())}
+    setRows(rows,'已讀取 / Đã đọc');
+  }catch(e){err(e)}
+};
+let WB=null;
+function sheetRows(n){return parseCsv(XLSX.utils.sheet_to_csv(WB.Sheets[n]))}
+function fillSheets(){const s=$('#shSel');s.innerHTML='';WB.SheetNames.forEach(n=>s.appendChild(new Option(n,n)));s.style.display=WB.SheetNames.length>1?'':'none'}
+async function readLocal(fh){
+  const f=await fh.getFile(),buf=await f.arrayBuffer(),u=new Uint8Array(buf);
+  if(u[0]===0x50&&u[1]===0x4B){
+    if(!window.XLSX)throw new Error('Excel 讀取元件尚未載入，請確認網路後重新整理頁面');
+    WB=XLSX.read(buf,{type:'array'});fillSheets();return sheetRows(WB.SheetNames[0]);
+  }
+  WB=null;$('#shSel').style.display='none';
+  return parseCsv(new TextDecoder('utf-8').decode(buf));
+}
+const PICK={types:[{description:'CSV 或 Excel',accept:{'text/csv':['.csv'],'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]};
+$('#bCL').onclick=async()=>{try{
+  const [fh]=await showOpenFilePicker(PICK);
+  setRows(await readLocal(fh),'已讀取 / Đã đọc：'+fh.name);
+}catch(e){if(e.name!=='AbortError')err(e)}};
+$('#shSel').onchange=()=>{try{setRows(sheetRows($('#shSel').value),'工作表 / Trang tính '+$('#shSel').value)}catch(e){err(e)}};
+
+/* ---------- 輸出資料夾 ---------- */
+$('#bO').onclick=async()=>{try{
+  const d=await showDirectoryPicker({mode:'readwrite'});
+  const nm=pf()+outTag();st.dir=d.name===nm?d:await d.getDirectoryHandle(nm,{create:true});
+  st.done=new Set();
+  for await(const [n,h] of st.dir.entries())if(h.kind==='file'&&/\.mp3$/i.test(n))st.done.add(n.replace(/\.mp3$/i,'').toLowerCase());
+  $('#tO').innerHTML=`<b>${st.dir.name}</b>　已有 ${st.done.size} 個 MP3 / đã có ${st.done.size} file MP3`;
+  render();goNext(-1);
+}catch(e){}};
+
+/* ---------- 清單 ---------- */
+const clean=t=>$('#cStrip').checked?t.replace(/^\s*\d+\s*[.．、。:：]?\s*/,'').replace(/^\s*[（(]?[ABCabc][)）.．、:：]\s*/,'').trim():t.trim();
+function render(){
+  const L=$('#list'),todo=$('#cTodo').checked;L.innerHTML='';
+  st.items.forEach((it,i)=>{
+    const dn=st.done.has(it.key);if(todo&&dn&&i!==st.i)return;
+    const d=document.createElement('div');d.className='it'+(i===st.i?' cur':'');
+    d.innerHTML=`<span class="d">${dn?'✓':''}</span><div><div class="k">${it.key}</div><div></div></div>`;
+    d.querySelector('div>div:last-child').textContent=(it.lab?it.lab+'　':'')+clean(it.raw).replace(/\n/g,'　');
+    d.onclick=()=>select(i);L.appendChild(d);
+  });
+  const c=L.querySelector('.cur');if(c)c.scrollIntoView({block:'nearest'});
+  $('#tO').dataset.n=st.done.size;
+  head();
+}
+function head(){
+  const n=st.items.filter(x=>st.done.has(x.key)).length;
+  document.title=st.items.length?`錄音工具 ${n}/${st.items.length}`:'錄音工具';
+  if(st.items.length)$('#stat').dataset.prog=`已錄 ${n} / ${st.items.length}`;
+  updUI();
+}
+function ctx(it){
+  const c=$('#ctx');c.innerHTML='';
+  if(it&&it.cmp){const f=document.createElement('div');f.className='tag';f.style.cssText='margin-top:6px;white-space:pre-line;font-size:17px';f.textContent='對照 / Đối chiếu：'+it.cmp;c.appendChild(f);return}
+  if(!it||!it.grp)return;
+  st.items.filter(x=>x.grp===it.grp).forEach(x=>{
+    const d=document.createElement('div');
+    d.textContent=`${x.lab}　${clean(x.raw)}${st.done.has(x.key)?'　✓':''}`;
+    d.style.cssText='padding:3px 8px;border-radius:4px'+(x===it?';background:color-mix(in srgb,var(--acc) 18%,transparent);font-weight:600':';color:var(--mut)');
+    c.appendChild(d);
+  });
+  if(it.full){const f=document.createElement('div');f.className='tag';f.style.marginTop='6px';f.textContent='原始朗讀文字 / Văn bản gốc：'+it.full;c.appendChild(f)}
+}
+function select(i){
+  if(st.mode==='rec')return;
+  st.i=i;st.mode='idle';st.blob=null;stopAudio();
+  const it=st.items[i];
+  $('#key').textContent=it?`${it.key}　（已錄 ${st.items.filter(x=>st.done.has(x.key)).length} / ${st.items.length}） Đã ghi`:'';
+  const big=$('#big');big.textContent='';big.style.whiteSpace='pre-line';
+  if(it){
+    if(it.lab){const s=document.createElement('span');s.textContent=it.lab+'　';s.style.cssText='color:var(--mut);font-weight:700';big.appendChild(s)}
+    big.appendChild(document.createTextNode(clean(it.raw)));
+  }
+  ctx(it);
+  msg(it&&st.done.has(it.key)?'這題已錄過，再錄會覆蓋舊檔 / Câu này đã ghi, ghi lại sẽ ghi đè file cũ':'');
+  buttons();render();
+}
+function goNext(from){
+  const n=st.items.length;if(!n)return;
+  for(let k=1;k<=n;k++){const j=(from+k+n)%n;if(!st.done.has(st.items[j].key)){select(j);return}}
+  select(Math.max(0,Math.min(from+1,n-1)));msg('全部都錄完了 / Đã ghi âm xong tất cả');
+}
+function msg(t,bad){const s=$('#stat');s.textContent=t;s.className=bad?'warn':'tag'}
+function buttons(){
+  const has=st.i>=0,it=st.items[st.i];
+  $('#bRec').disabled=!has;$('#bRec').innerHTML=st.mode==='rec'?'停止（空白鍵）<span class="vi">Dừng (phím Cách)</span>':'開始錄音（空白鍵）<span class="vi">Bắt đầu ghi âm (phím Cách)</span>';
+  $('#bRec').classList.toggle('rec',st.mode==='rec');
+  $('#bPlay').disabled=!st.blob;$('#bSave').disabled=!st.blob;
+  $('#bOld').disabled=!(has&&st.dir&&it&&st.done.has(it.key));
+}
+
+/* ---------- 錄音 ---------- */
+async function initMic(){
+  if(st.stream)return;
+  const id=$('#mic').value;
+  st.stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:id?{exact:id}:undefined,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  st.ac=st.ac||new AudioContext();
+  const src=st.ac.createMediaStreamSource(st.stream);st.an=st.ac.createAnalyser();st.an.fftSize=1024;src.connect(st.an);
+  const buf=new Float32Array(st.an.fftSize);
+  (function loop(){st.an.getFloatTimeDomainData(buf);let p=0;for(const v of buf)p=Math.max(p,Math.abs(v));
+    $('#meter i').style.width=Math.min(100,p*100)+'%';$('#meter i').style.background=p>0.97?'var(--bad)':'var(--ok)';requestAnimationFrame(loop)})();
+  const ds=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput');
+  const cur=st.stream.getAudioTracks()[0].getSettings().deviceId;
+  $('#mic').innerHTML=ds.map(d=>`<option value="${d.deviceId}" ${d.deviceId===cur?'selected':''}>${d.label||'麥克風'}</option>`).join('');
+}
+$('#mic').onchange=()=>{if(st.stream){st.stream.getTracks().forEach(t=>t.stop());st.stream=null}};
+async function toggle(){
+  if(st.i<0)return;
+  try{
+    if(st.mode==='rec'){st.mr.stop();return}
+    stopAudio();await initMic();await st.ac.resume();
+    const ch=[];st.mr=new MediaRecorder(st.stream);
+    st.mr.ondataavailable=e=>ch.push(e.data);
+    st.mr.onstop=()=>finish(new Blob(ch));
+    st.mr.start();st.mode='rec';st.blob=null;msg('錄音中… / Đang ghi âm…');buttons();
+  }catch(e){msg('無法使用麥克風 / Không dùng được micro：'+e.message,1)}
+}
+async function finish(raw){
+  st.mode='idle';msg('處理中… / Đang xử lý…');buttons();
+  try{
+    const dec=await st.ac.decodeAudioData(await raw.arrayBuffer());
+    const oc=new OfflineAudioContext(1,Math.max(1,Math.ceil(dec.duration*44100)),44100);
+    const s=oc.createBufferSource();s.buffer=dec;s.connect(oc.destination);s.start();
+    const d=(await oc.startRendering()).getChannelData(0);
+    let peak=0;for(let i=0;i<d.length;i++){const a=Math.abs(d[i]);if(a>peak)peak=a}
+    if(peak<0.01){msg('沒有偵測到聲音，請檢查麥克風後重錄 / Không phát hiện âm thanh, hãy kiểm tra micro rồi ghi lại',1);return}
+    let a=0,b=d.length,gain=1;
+    if($('#cTrim').checked){
+      const thr=Math.max(0.01,peak*0.06),w=441;let f=-1,l=-1;
+      for(let i=0;i<d.length;i+=w){let m=0;for(let j=i;j<Math.min(i+w,d.length);j++)m=Math.max(m,Math.abs(d[j]));if(m>thr){if(f<0)f=i;l=i+w}}
+      a=Math.max(0,f-Math.round(.08*44100));b=Math.min(d.length,l+Math.round(.15*44100));
+      gain=Math.min(8,0.9/peak);
+    }
+    const n=b-a,pcm=new Int16Array(n);
+    for(let i=0;i<n;i++)pcm[i]=Math.max(-1,Math.min(1,d[a+i]*gain))*32767;
+    const enc=new lamejs.Mp3Encoder(1,44100,+$('#kbps').value||64),parts=[];
+    for(let i=0;i<n;i+=1152){const o=enc.encodeBuffer(pcm.subarray(i,i+1152));if(o.length)parts.push(o)}
+    parts.push(enc.flush());
+    st.blob=new Blob(parts,{type:'audio/mpeg'});
+    if(st.url)URL.revokeObjectURL(st.url);st.url=URL.createObjectURL(st.blob);
+    st.mode='review';
+    let w=`長度 ${(n/44100).toFixed(2)} 秒 / Độ dài ${(n/44100).toFixed(2)} giây`;
+    if(peak>0.98)w+='　⚠ 錄音有爆音，建議調低麥克風音量再錄 / Âm thanh bị vỡ, hãy giảm âm lượng micro';
+    else if(peak<0.05)w+='　⚠ 原始音量偏小，建議靠近麥克風或調高輸入音量 / Âm lượng nhỏ, hãy lại gần micro hoặc tăng âm lượng';
+    msg(w+'　試聽中，滿意按 Enter 存檔 / Đang nghe thử, hài lòng thì nhấn Enter để lưu',peak>0.98||peak<0.05);buttons();play(st.url);
+  }catch(e){msg('處理失敗 / Xử lý thất bại：'+e.message,1)}
+}
+function play(u){stopAudio();st.aud=new Audio(u);st.aud.play()}
+function stopAudio(){if(st.aud){st.aud.pause();st.aud=null}}
+
+/* ---------- 存檔 ---------- */
+async function save(){
+  if(!st.blob||st.mode==='rec')return;
+  const it=st.items[st.i],fn=it.key+'.mp3';
+  try{
+    if(st.dir){const fh=await st.dir.getFileHandle(fn,{create:true});const w=await fh.createWritable();await w.write(st.blob);await w.close()}
+    else{const a=document.createElement('a');a.href=URL.createObjectURL(st.blob);a.download=fn;a.click()}
+    st.done.add(it.key);st.blob=null;
+    const i=st.i;render();goNext(i);msg('已存 / Đã lưu '+fn);
+  }catch(e){msg('存檔失敗 / Lưu thất bại：'+e.message,1)}
+}
+$('#bOld').onclick=async()=>{
+  const it=st.items[st.i];try{const f=await (await st.dir.getFileHandle(it.key+'.mp3')).getFile();play(URL.createObjectURL(f))}catch(e){msg('讀不到舊檔 / Không đọc được file cũ',1)}};
+
+$('#bRec').onclick=toggle;$('#bSave').onclick=save;
+$('#bPlay').onclick=()=>st.url&&play(st.url);
+$('#bPrev').onclick=()=>select(Math.max(0,st.i-1));
+$('#bSkip').onclick=()=>select(Math.min(st.items.length-1,st.i+1));
+$('#cStrip').onchange=()=>{render();select(st.i)};$('#cTodo').onchange=render;
+function rerun(){if(st.lastRows)try{setRows(st.lastRows,st.lastLabel)}catch(e){err(e)}}
+function resetOut(){st.dir=null;st.done=new Set();$('#tO').textContent='請重新選擇輸出資料夾（錄音欄位或後綴已變更） / Hãy chọn lại thư mục lưu (đã đổi cột hoặc hậu tố)'}
+$('#recMode').onchange=rerun;
+function recColChanged(){
+  const rc=$('#recCol').value,hd=st.lastRows?st.lastRows[0]:[],vi=/越南/.test(rc);
+  $('#sfx').value=vi?'vi':'';
+  if(vi&&!$('#cmpCol').value){const j=hd.find(h=>/^(中文|華語|华语|漢語|汉语)$|語音文稿|语音文稿|朗讀|朗读|腳本|script/i.test(h.trim()));if(j)$('#cmpCol').value=j}
+  if(!vi)$('#cmpCol').value='';
+  resetOut();rerun();
+}
+$('#recCol').onchange=recColChanged;
+function warnTC(t){const e=$('#tC');e.textContent=t;e.className='warn';e.style.fontWeight='600'}
+$('#bVi').onclick=()=>{
+  const hd=st.lastRows?st.lastRows[0]:[],isVi=h=>/越南|vietnam/i.test(h);
+  const c=hd.find(h=>/^(越南語|越南语)$/.test(h.trim()))||hd.find(h=>isVi(h)&&!/[ABC]\s*$/i.test(h)&&!/句\d+$/.test(h))||hd.find(isVi);
+  if(!hd.length)return warnTC('請先載入題庫 / Hãy tải câu hỏi trước');
+  if(!c)return warnTC('找不到越南語欄位（欄名要含「越南」） / Không tìm thấy cột tiếng Việt (tên cột phải có "越南")');
+  $('#recCol').value=c;recColChanged();
+};
+$('#bZh').onclick=()=>{
+  const hd=st.lastRows?st.lastRows[0]:[];
+  if(!hd.length)return warnTC('請先載入題庫 / Hãy tải câu hỏi trước');
+  const c=hd.find(h=>/^(中文|華語|华语|漢語|汉语)$/.test(h.trim()));
+  $('#recCol').value=c||'';recColChanged();
+};
+function updUI(){
+  const has=st.items.length>0,rc=$('#recCol').value,vi=/越南/.test(rc),k=st.items[0]&&st.items[0].key;
+  $('#s1').classList.toggle('now',!has);$('#s2').classList.toggle('now',has&&!st.dir);$('#s3').classList.toggle('now',has&&!!st.dir);
+  $('#bVi').classList.toggle('on',vi);$('#bZh').classList.toggle('on',has&&!vi);
+  $('#tMode').textContent=has?`目前錄：${rc||'自動'} ｜ Đang ghi: ${rc||'tự động'} ｜ 檔名例 / Ví dụ tên file：${k}.mp3`:'';
+}
+if(!window.showDirectoryPicker)$('#warnBrowser').style.display='';
+updUI();
+$('#cmpCol').onchange=rerun;
+$('#sfx').onchange=()=>{resetOut();rerun()};
+try{$('#kbps').value=localStorage.getItem('rc_kbps')||'64'}catch(e){$('#kbps').value='64'}
+$('#kbps').onchange=()=>{try{localStorage.setItem('rc_kbps',$('#kbps').value)}catch(e){}};
+document.addEventListener('keydown',e=>{
+  if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&e.target.type!=='checkbox')return;
+  if(e.code==='Space'){e.preventDefault();toggle()}
+  else if(e.key==='Enter'){e.preventDefault();save()}
+  else if(e.key==='p'||e.key==='P'){if(st.url&&st.blob)play(st.url)}
+  else if(e.key==='ArrowUp'){e.preventDefault();$('#bPrev').click()}
+  else if(e.key==='ArrowDown'){e.preventDefault();$('#bSkip').click()}
+});
+</script>
+</body>
+</html>

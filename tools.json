@@ -1,0 +1,47 @@
+{
+  "app": "工具管理器",
+  "managerVersion": "v1.1",
+  "updatedAt": "2026-11-28T06:00:00.000Z",
+  "tagList": [],
+  "tools": [
+    {
+      "id": "t-url-copy",
+      "icon": "📋",
+      "name": "一鍵複製網址",
+      "fileName": "一鍵複製網址.html",
+      "url": "url-copy.html",
+      "tags": [],
+      "desc": "整理網址與文字片段,一鍵複製。",
+      "version": "1.9",
+      "status": "使用中",
+      "note": "",
+      "pinned": false
+    },
+    {
+      "id": "t-invoice",
+      "icon": "🧾",
+      "name": "發票稅金計算機",
+      "fileName": "發票稅金計算機.html",
+      "url": "invoice-tax-calc.html",
+      "tags": [],
+      "desc": "三聯式發票:輸入未稅或總額,算出稅金與另一個金額。",
+      "version": "",
+      "status": "使用中",
+      "note": "",
+      "pinned": false
+    },
+    {
+      "id": "t-recorder",
+      "icon": "🎙️",
+      "name": "外語錄音工具",
+      "fileName": "外語錄音工具.html",
+      "url": "language-recorder.html",
+      "tags": [],
+      "desc": "外語錄音練習工具。",
+      "version": "",
+      "status": "使用中",
+      "note": "",
+      "pinned": false
+    }
+  ]
+}

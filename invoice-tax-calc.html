@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>發票計算_v1.1</title>
+<style>
+:root{--bg:#14161a;--card:#1f2329;--line:#343a43;--text:#eef1f5;--sub:#9aa3af;--accent:#4da3ff;
+--paper:#fbf3e6;--ink:#c8321e;--num:#1a1a1a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;display:flex;justify-content:center;padding:14px}
+.wrap{width:100%;max-width:640px}
+h1{font-size:1.2rem;margin:2px 0}
+.ver{color:var(--sub);font-size:.85rem;margin-bottom:12px}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.inputs label{display:block;color:var(--sub);font-size:.95rem;margin-bottom:4px}
+input[type=text]{width:100%;font-size:1.5rem;font-weight:700;padding:10px;background:#0f1114;color:var(--text);border:2px solid var(--line);border-radius:10px;outline:none}
+input[type=text]:focus{border-color:var(--accent)}
+.paper{background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:8px;color:var(--ink)}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+td,th{border:1.5px solid var(--ink);text-align:center;padding:0}
+th{font-weight:600;font-size:.8rem;padding:4px 0;background:rgba(200,50,30,.07)}
+th.lab,td.lab{width:21%;font-size:.95rem;font-weight:700;padding:4px 2px;line-height:1.25}
+td.d{height:46px;font-size:1.7rem;font-weight:700;color:var(--num);font-family:"Segoe UI",Roboto,monospace}
+td.d.on{background:rgba(200,50,30,.05)}
+.ck{display:flex;flex-direction:column;gap:2px;align-items:flex-start;font-size:.8rem;font-weight:600;padding-left:4px}
+.ck label{display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap}
+.ck input{accent-color:var(--ink);margin:0;width:15px;height:15px}
+.btns{display:flex;gap:10px;margin-top:12px}
+button{flex:1;font-size:1.05rem;padding:12px;border:0;border-radius:10px;font-weight:700;cursor:pointer;background:var(--accent);color:#06121f}
+button.ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
+.hint{color:var(--sub);font-size:.85rem;margin:10px 2px}
+@media(min-width:700px){td.d{height:60px;font-size:2.2rem}th{font-size:.95rem}td.lab,th.lab{font-size:1.1rem}input[type=text]{font-size:1.8rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>三聯式發票計算</h1>
+  <div class="ver">發票計算_v1.1</div>
+
+  <div class="inputs">
+    <div><label for="amt">輸入金額（未稅）</label><input id="amt" type="text" inputmode="numeric" autocomplete="off" placeholder="未稅金額"></div>
+    <div><label for="tot">輸入總計（含稅）</label><input id="tot" type="text" inputmode="numeric" autocomplete="off" placeholder="含稅總額"></div>
+  </div>
+
+  <div class="paper">
+    <table>
+      <thead><tr><th class="lab"></th><th>千</th><th>百</th><th>十</th><th>萬</th><th>千</th><th>百</th><th>十</th><th>元</th></tr></thead>
+      <tbody id="rows">
+        <tr data-k="amt"><td class="lab">金　額</td></tr>
+        <tr data-k="sum"><td class="lab">銷售額<br>合計</td></tr>
+        <tr data-k="tax"><td class="lab"><div class="ck">
+          <label><input type="radio" name="t" value="5" checked>應稅 5%</label>
+          <label><input type="radio" name="t" value="0">零稅率</label>
+          <label><input type="radio" name="t" value="x">免稅</label></div></td></tr>
+        <tr data-k="tot"><td class="lab">總　計</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="btns"><button class="ghost" id="clear">清除</button></div>
+  <div class="hint">任一欄輸入即可，其餘自動算出。稅金四捨五入到整數；由總計反推時，金額＝總計÷1.05 四捨五入，稅金＝總計－金額。零稅率、免稅時稅金為 0。</div>
+</div>
+<script>
+const amt=document.getElementById('amt'),tot=document.getElementById('tot');
+const N=8;
+document.querySelectorAll('#rows tr').forEach(tr=>{for(let i=0;i<N;i++){const td=document.createElement('td');td.className='d';tr.appendChild(td)}});
+const num=s=>{const n=parseInt(String(s).replace(/[^\d]/g,''),10);return isNaN(n)?null:n};
+const fmt=n=>n.toLocaleString('en-US');
+const rate=()=>document.querySelector('input[name=t]:checked').value==='5'?0.05:0;
+let last='amt';
+function show(k,v){
+  const cells=document.querySelectorAll(`#rows tr[data-k=${k}] td.d`);
+  const s=v===null?'':String(v).slice(-N);
+  cells.forEach((c,i)=>{const j=i-(N-s.length);c.textContent=j>=0?s[j]:'';});
+}
+function calc(){
+  let a=null,t=null,T=null;
+  if(last==='amt'){
+    a=num(amt.value);
+    if(a!==null){t=Math.round(a*rate());T=a+t;tot.value=fmt(T);amt.value=fmt(a)}else tot.value='';
+  }else{
+    T=num(tot.value);
+    if(T!==null){a=rate()?Math.round(T/1.05):T;t=T-a;amt.value=fmt(a);tot.value=fmt(T)}else amt.value='';
+  }
+  show('amt',a);show('sum',a);show('tax',a===null?null:t);show('tot',T);
+}
+amt.addEventListener('input',()=>{last='amt';calc()});
+tot.addEventListener('input',()=>{last='tot';calc()});
+document.querySelectorAll('input[name=t]').forEach(r=>r.addEventListener('change',calc));
+document.getElementById('clear').onclick=()=>{amt.value='';tot.value='';last='amt';calc();amt.focus()};
+calc();
+</script>
+</body>
+</html>
