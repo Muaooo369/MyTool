@@ -1,7 +1,7 @@
 {
   "app": "工具管理器",
   "managerVersion": "v1.1",
-  "updatedAt": "2026-11-28T06:00:00.000Z",
+  "updatedAt": "2026-11-28T09:28:07.324Z",
   "tagList": [],
   "tools": [
     {
@@ -15,7 +15,7 @@
       "version": "1.9",
       "status": "使用中",
       "note": "",
-      "pinned": false
+      "pinned": true
     },
     {
       "id": "t-invoice",
@@ -28,7 +28,7 @@
       "version": "",
       "status": "使用中",
       "note": "",
-      "pinned": false
+      "pinned": true
     },
     {
       "id": "t-recorder",
@@ -38,6 +38,19 @@
       "url": "language-recorder.html",
       "tags": [],
       "desc": "外語錄音練習工具。",
+      "version": "",
+      "status": "使用中",
+      "note": "",
+      "pinned": false
+    },
+    {
+      "id": "tmx07jcm13ukn",
+      "icon": "🎮",
+      "name": "寶可夢問答",
+      "fileName": "",
+      "url": "https://muaooo369.github.io/PM-QUIZ/",
+      "tags": [],
+      "desc": "",
       "version": "",
       "status": "使用中",
       "note": "",
